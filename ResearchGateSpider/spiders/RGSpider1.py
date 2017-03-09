@@ -17,7 +17,8 @@ class RGSpider1(CrawlSpider):
     name = 'RGSpider1'
     #name = "ResearchGateSpider"
     domain = 'https://www.researchgate.net'
-    start_urls = pd.read_csv('/data/pure_chn_link.csv', header=None).ix[:, 0].tolist()
+    # start_urls = pd.read_csv('/data/pure_chn_link.csv', header=None).ix[:, 0].tolist()
+    start_urls = ['https://www.researchgate.net/profile/Hui_Zhang106',]
     # pub_item = []
     # finger_print = ''
     # start_urls = ['https://www.researchgate.net/profile/Anahid_A_Birjandi/contributions']
