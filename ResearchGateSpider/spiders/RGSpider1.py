@@ -23,7 +23,7 @@ class RGSpider1(CrawlSpider):
     # start_urls = ['https://www.researchgate.net/profile/Anahid_A_Birjandi/contributions']
 
     def parse(self, response):
-        return parse_candidate_overview(response)
+        return self.parse_candidate_overview(response)
 
     def parse_candidate_overview(self, response):
         if response.status == 429:
@@ -31,7 +31,7 @@ class RGSpider1(CrawlSpider):
             self.lostitem_file.write(lostitem_str)
             self.lostitem_file.close()
             raise CloseSpider(reason='被封了，准备切换ip')
-        print response.url
+        print '-----------start to process: ' + response.url
         headers = response.request.headers
         headers["referer"] = response.url
 
@@ -55,7 +55,7 @@ class RGSpider1(CrawlSpider):
             city = address
             province = ''
             country = ''
-        if featured_researches and country != 'China' 
+        if featured_researches and country != 'China': 
             item = ResearchGateItem()
 
             item['person_key'] = request_fingerprint(response.request)
@@ -83,6 +83,8 @@ class RGSpider1(CrawlSpider):
             url = response.url + "/publications"
             print url
             return Request(url, headers=headers, callback=self.parse_contribution, dont_filter=True, meta={"item":item})
+        else:
+            print "--------Nothing to return, it is invalid--------"
         # yield Request(url, callback=self.parse_contribution, dont_filter=True, meta={"item":item})
 
     def parse_contribution(self, response):
