@@ -3,7 +3,7 @@
 from scrapy.spiders import CrawlSpider
 from scrapy import Request, FormRequest
 from scrapy.utils.request import request_fingerprint
-from ResearchGateSpider.items import ResearchGateItem
+from ResearchGateSpider.items import RGPersonItem, RGArticleItem
 from ResearchGateSpider.datafilter import DataFilter
 from ResearchGateSpider.func import parse_text_by_multi_content
 from scrapy.exceptions import CloseSpider
@@ -36,7 +36,7 @@ class RGSpider1(CrawlSpider):
         headers = response.request.headers
         headers["referer"] = response.url
 
-        item = ResearchGateItem()
+        item = RGPersonItem()
 
         featured_researches = response.xpath('//div[contains(@class, "profile-highlights-publications")]').extract()
         address = DataFilter.simple_format(response.xpath('//div[contains(@class, "institution-location")]/text()').extract())
@@ -58,7 +58,8 @@ class RGSpider1(CrawlSpider):
             city = address
             province = ''
             country = ''
-        item['person_key'] = request_fingerprint(response.request)
+        person_key = request_fingerprint(response.request)
+        item['person_key'] = person_key
         item['fullname'] = DataFilter.simple_format(response.xpath('//a[@class = "ga-profile-header-name"]/text()').extract())
         item['target_sciences'] = DataFilter.simple_format(response.xpath('//*[@id="target-sciences"]/text()').extract())
         item['title'] = DataFilter.simple_format(response.xpath('//*[contains(@class,"profile-degree")]/div[@class="title"]/text()').extract())
@@ -79,11 +80,10 @@ class RGSpider1(CrawlSpider):
         item['city'] = city
         item['province'] = province
         item['country'] = country
-        print id(item)
         if featured_researches and country != 'China': 
             url = response.url + "/publications"
-            print id(item)
-            return Request(url, headers=headers, callback=self.parse_contribution, dont_filter=True, meta={"item":item})
+            yield item
+            yield Request(url, headers=headers, callback=self.parse_contribution, dont_filter=True, meta={"person_key":person_key})
         else:
             print "--------Nothing to return, it is invalid--------"
 
@@ -98,19 +98,15 @@ class RGSpider1(CrawlSpider):
         headers = response.request.headers
         headers["referer"] = response.url
         # Parse articles, each article has a seperate page
-        item = response.meta["item"]
-        item['publications'] = []
-        print id(item)
+        person_key = response.meta["person_key"]
+        
         headers = response.request.headers
         headers["referer"] = response.url
         article_urls = response.xpath(
                 '//li[contains(@class, "li-publication")]/descendant::a[contains(@class, "js-publication-title-link")]/@href').extract()
-        article_count = len(article_urls)
-        if article_count == 0:
-            yield item
         for article_url in article_urls:
             article_url = self.domain + "/" + article_url
-            yield Request(article_url, headers=headers, callback=self.parse_article, dont_filter=True, meta={'item':item, 'count':article_count})
+            yield Request(article_url, headers=headers, callback=self.parse_article, dont_filter=True, meta={'person_key':person_key})
 
     def parse_article(self, response):
         if response.status == 429:
@@ -118,10 +114,12 @@ class RGSpider1(CrawlSpider):
             self.lostitem_file.write(lostitem_str)
             self.lostitem_file.close()
             raise CloseSpider(reason='被封了，准备切换ip')
-        print response.url
-        item = response.meta['item']
-        print id(item)
-        pub_count = response.meta['count']
+
+        item = RGArticleItem()
+        person_key = response.meta['person_key']
+        item['author_key'] = person_key
+        item['article_key'] = request_fingerprint(response.request)
+
         article_item = {}
         article_name = DataFilter.simple_format(response.xpath('//div[@class="publication-header"]//h1[@class="publication-title"]/text()').extract())
         article_item['article_name'] = article_name
@@ -130,11 +128,8 @@ class RGSpider1(CrawlSpider):
         article_journal = DataFilter.simple_format(response.xpath('//span[@class="publication-meta-journal"]/a').extract())
         article_date = DataFilter.simple_format(response.xpath('//span[@class="publication-meta-date"]').extract())
         article_item['article_journal'] = article_journal + ", " + article_date
-        item['publications'].append(article_item)
-
-        print "**********Handled %i of %i articles" % (len(item['publications']), pub_count)
-        if len(item['publications']) == pub_count:
-            return item
+        item['article'] = article_item
+        return item
     
     def __init__(self, **kwargs):
         self.lostitem_file = open('/data/pure_chinese_lost.out', 'a+')

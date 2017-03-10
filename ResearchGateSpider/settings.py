@@ -70,7 +70,8 @@ mysql_dbname = 'eol_flat'
 mongodb_server = '118.190.45.60'
 mongodb_port = 27017
 mongodb_db = 'RG_Chinese'
-mongodb_collection = 'RGPerson'
+mongodb_person_collection = 'person'
+mongodb_article_collection = 'article'
 
 mongodb_user = 'eol_spider'
 mongodb_pwd = 'm~b4^Uurp)g'
