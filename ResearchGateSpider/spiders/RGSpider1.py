@@ -28,9 +28,9 @@ class RGSpider1(CrawlSpider):
 
     def parse_candidate_overview(self, response):
         if response.status == 429:
-            # lostitem_str = 'lost overview: ' + response.url
-            # self.lostitem_file.write(lostitem_str)
-            # self.lostitem_file.close()
+            lostitem_str = 'lost overview: ' + response.url
+            self.lostitem_file.write(lostitem_str)
+            self.lostitem_file.close()
             raise CloseSpider(reason='被封了，准备切换ip')
         print '-----------start to process: ' + response.url
         headers = response.request.headers
@@ -79,10 +79,11 @@ class RGSpider1(CrawlSpider):
         item['city'] = city
         item['province'] = province
         item['country'] = country
+        print id(item)
         if featured_researches and country != 'China': 
             url = response.url + "/publications"
-            print url
-            yield Request(url, headers=headers, callback=self.parse_contribution, dont_filter=True, meta={"item":item})
+            print id(item)
+            return Request(url, headers=headers, callback=self.parse_contribution, dont_filter=True, meta={"item":item})
         else:
             print "--------Nothing to return, it is invalid--------"
 
@@ -99,7 +100,7 @@ class RGSpider1(CrawlSpider):
         # Parse articles, each article has a seperate page
         item = response.meta["item"]
         item['publications'] = []
-
+        print id(item)
         headers = response.request.headers
         headers["referer"] = response.url
         article_urls = response.xpath(
@@ -119,8 +120,8 @@ class RGSpider1(CrawlSpider):
             raise CloseSpider(reason='被封了，准备切换ip')
         print response.url
         item = response.meta['item']
+        print id(item)
         pub_count = response.meta['count']
-        
         article_item = {}
         article_name = DataFilter.simple_format(response.xpath('//div[@class="publication-header"]//h1[@class="publication-title"]/text()').extract())
         article_item['article_name'] = article_name
